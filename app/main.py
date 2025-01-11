@@ -9,6 +9,11 @@ LETTERBOXD_USERNAME = os.getenv("LETTERBOXD_USERNAME")
 LETTERBOXD_PASSWORD = os.getenv("LETTERBOXD_PASSWORD")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+PLEX_URL = os.getenv("PLEX_URL", "http://localhost:32400")
+PLEX_TOKEN = os.getenv("PLEX_TOKEN")
+PLEX_LIBRARY = os.getenv("PLEX_LIBRARY", "Films")
+CSV_LIMIT = int(os.getenv("CSV_LIMIT", 10))
+CSV_FILE = os.getenv("CSV_FILE", "file.csv")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -16,6 +21,9 @@ logging.basicConfig(
 )
 
 def send_telegram_message(message):
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        logging.warning("Telegram bot token or chat id not set")
+        return
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         payload = {
@@ -91,10 +99,10 @@ def upload_csv(csv_file):
 
 
 def main():
-    generate_csv()
+    generate_csv(PLEX_URL, PLEX_TOKEN, PLEX_LIBRARY, CSV_LIMIT, CSV_FILE)
     if not generate_csv:
         return 1
-    upload_csv(os.path.join(os.path.dirname(__file__), "file.csv"))
+    upload_csv(os.path.join(os.path.dirname(__file__), CSV_FILE))
 
 
 if __name__ == "__main__":

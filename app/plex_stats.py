@@ -5,21 +5,14 @@ import os
 import logging
 
 
-# Configuration
-PLEX_URL = os.getenv("PLEX_URL")
-PLEX_TOKEN = os.getenv("PLEX_TOKEN")
-CSV_LIMIT = int(os.getenv("CSV_LIMIT", 10))
-CSV_FILE = os.getenv("CSV_FILE", "file.csv")
-
-
 # Setup logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
 
-def fetch_watched_movies(plex):
-    library = plex.library.section("Films")
+def fetch_watched_movies(plex, plex_library):
+    library = plex.library.section(plex_library)
     movies = library.all()
     watched_movies = []
 
@@ -65,10 +58,10 @@ def export_to_csv(movies, file_path):
         logging.error(f"Error writing to CSV file: {e}")
 
 
-def main():
-    plex = PlexServer(PLEX_URL, PLEX_TOKEN)
+def main(plex_url, plex_token, plex_library, csv_limit, csv_file):
+    plex = PlexServer(plex_url, plex_token)
 
-    watched_movies = fetch_watched_movies(plex)
+    watched_movies = fetch_watched_movies(plex, plex_library)
     watched_movies_sorted = sorted(
         watched_movies,
         key=lambda x: (
@@ -78,10 +71,10 @@ def main():
         ),
         reverse=True,
     )
-    export_to_csv(watched_movies_sorted[:CSV_LIMIT], CSV_FILE)
+    export_to_csv(watched_movies_sorted[:csv_limit], csv_file)
 
-    if not os.path.exists(CSV_FILE):
-        logging.error(f"Failed to export data to {CSV_FILE}")
+    if not os.path.exists(csv_file):
+        logging.error(f"Failed to export data to {csv_file}")
         return False
 
     return True
