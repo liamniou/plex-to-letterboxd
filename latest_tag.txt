@@ -1,1 +1,1 @@
-liamnou/plex-to-letterboxd:sha-9869d9
+liamnou/plex-to-letterboxd:sha-d4ef70
