@@ -1,0 +1,14 @@
+services:
+  plex-to-letterboxd:
+    image: liamnou/plex-to-letterboxd:latest
+    container_name: plex-to-letterboxd
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    environment:
+      - LETTERBOXD_USERNAME=${LETTERBOXD_USERNAME}
+      - LETTERBOXD_PASSWORD=${LETTERBOXD_PASSWORD}
+      - PLEX_URL=${PLEX_URL}
+      - PLEX_TOKEN=${PLEX_TOKEN}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
