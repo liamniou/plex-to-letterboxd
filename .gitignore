@@ -132,3 +132,7 @@ dmypy.json
 .idea/
 
 file.csv
+
+node_modules/
+web/dist/
+app/static/

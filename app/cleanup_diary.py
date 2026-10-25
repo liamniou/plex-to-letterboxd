@@ -86,7 +86,7 @@ def _collect_entries(page) -> list[dict]:
             """() => [...document.querySelectorAll('tr.diary-entry-row')].map(tr => {
                 const idEl = tr.querySelector('[data-viewing-id]');
                 const filmLink = tr.querySelector("a[href*='/film/']");
-                const dayLink = tr.querySelector("a[href*='/diary/for/'], a[href*='/diary/films/for/']");
+                const dayLink = tr.querySelector("td.col-daydate a") || tr.querySelector("a[href*='/diary/for/'], a[href*='/diary/films/for/']");
                 return {
                     vid: idEl ? idEl.getAttribute('data-viewing-id') : null,
                     slug: filmLink ? (filmLink.getAttribute('href')||'').replace(/.*\\/film\\//,'').replace(/\\/.*/,'') : null,
