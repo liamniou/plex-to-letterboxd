@@ -48,10 +48,10 @@ def test_rating_and_rewatch():
     idx = matching.DiaryIndex([{"slug": "x", "name": "X (2000)", "date": "2020-01-01", "viewing_id": "1"}])
     w = {"lb_slug": "x", "watched_date": "2026-01-01", "view_count": 1, "last_viewed_at": "2026-01-01T10:00:00"}
     assert matching.is_rewatch(w, False, idx)
+    # Plex view count (may include someone else's plays) does not make it a rewatch.
     w2 = {"lb_slug": "y", "watched_date": "2026-01-01", "view_count": 2, "last_viewed_at": "2026-01-01T10:00:00"}
-    assert matching.is_rewatch(w2, False, idx)
-    w3 = {**w2, "view_count": 1}
-    assert not matching.is_rewatch(w3, False, idx)
+    assert not matching.is_rewatch(w2, False, idx)
+    assert matching.is_rewatch(w2, True, idx)
 
 
 # ---------------------------------------------------------------------------
@@ -220,3 +220,51 @@ def test_diary_read_error_aborts_without_touching_cache(mem_db, monkeypatch):
     assert db.status_counts()["diary"] == 1
     assert db.get_state("baseline_done") is None
     assert statuses() == {"X": "pending"}
+
+
+def test_manual_skip_reopens_on_newer_play_same_day(mem_db):
+    add(1, "Shared", d(0))
+    wid = db.query_one("SELECT id FROM watches")["id"]
+    db.set_watch_status(wid, "skipped", note="Skipped manually", manual_skip=1)
+    base = d(0) + "T20:00:00"
+    # Same play seen again (e.g. via history): still skipped.
+    assert db.insert_watch(1, d(0), base, "history") is None
+    assert db.insert_watch(1, d(0), d(0) + "T20:10:00", "plex") is None
+    # A later play that day is a new viewing.
+    assert db.insert_watch(1, d(0), d(0) + "T22:30:00", "plex") == "reopened"
+    w = db.get_watch(wid)
+    assert w["status"] == "pending" and w["manual_skip"] == 0 and w["watched_at"].endswith("22:30:00")
+
+
+def test_automatic_skip_is_not_reopened(mem_db):
+    add(1, "Old", d(400), status="skipped")
+    assert db.insert_watch(1, d(400), d(400) + "T23:59:00", "plex") is None
+    assert statuses() == {"Old": "skipped"}
+
+
+def test_skipped_partner_watch_does_not_make_next_viewing_a_rewatch(mem_db):
+    db.set_state("baseline_done", True)
+    settings = db.get_settings()
+    db.upsert_movie({"rating_key": 1, "title": "Shared", "year": 2020, "imdb_id": None, "tmdb_id": "1",
+                     "thumb": None, "user_rating": 8.0, "view_count": 2, "last_viewed_at": d(1) + "T20:00:00"})
+    db.insert_watch(1, d(5), d(5) + "T20:00:00", "plex", "skipped")  # partner's play
+    db.insert_watch(1, d(1), d(1) + "T20:00:00", "plex")              # mine
+    session = FakeSession(diary=[], slugs={"1": "shared"})
+    cands = sync.sync_candidates(settings)
+    index = sync.refresh_diary(session, cands, full=False)
+    sync.ensure_slugs(session, cands, index)
+    sync.upload(session, cands, index, run_id=1)
+    assert session.uploads[0][0]["Rewatch"] == "false"
+
+
+def test_migration_flags_existing_manual_skips(tmp_path):
+    import sqlite3
+    path = str(tmp_path / "old.db")
+    c = sqlite3.connect(path)
+    c.executescript(db.SCHEMA.replace("    manual_skip     INTEGER NOT NULL DEFAULT 0,\n", ""))
+    c.execute("INSERT INTO movies(rating_key, title) VALUES (1, 'A')")
+    c.execute("INSERT INTO watches(rating_key, watched_date, status, note, created_at, updated_at) VALUES (1, '2026-01-01', 'skipped', 'Skipped manually', 'x', 'x')")
+    c.commit(); c.close()
+    db.connect(path)
+    assert db.query_one("SELECT manual_skip FROM watches")["manual_skip"] == 1
+    db.connect(":memory:")

@@ -17,6 +17,12 @@ Films are matched to Letterboxd by TMDB/IMDb id (via `letterboxd.com/tmdb/<id>/`
 
 By default, a watch waits as **needs rating** until you rate the film in Plex, so no unrated diary entries are created.
 
+### Shared account (skip until the next play)
+
+If someone else watched a film on your Plex account, **Skip** that watch in the UI. It is never uploaded, but the film is not ignored: the next play is picked up as a new watch. That includes a later play on the same day (at least 30 minutes after the skipped one).
+
+The **Rewatch** flag only counts viewings you logged yourself, meaning an earlier synced watch or an earlier entry in your Letterboxd diary. Skipped plays and Plex's play count are ignored, so your first real viewing after your partner's is not marked as a rewatch.
+
 ### First run (baseline)
 
 The database starts empty, so the first sync reads your **entire** Letterboxd diary:
@@ -31,7 +37,7 @@ After the baseline, a newly discovered watch that is already older than `max_age
 Open `http://<host>:7477`:
 
 - **Dashboard**: counts, recently logged films, next/last sync and connection status.
-- **Watches**: every tracked watch with poster, rating and status, with filters and search. Per-row or bulk actions: **Queue** (sync again), **Skip**, **Mark synced**.
+- **Watches**: every tracked watch with poster, rating and status, with filters and search. Per-row or bulk actions: **Queue** (sync again), **Skip** (until the next play), **Mark synced**.
 - **Runs**: history of every sync, scan and reconcile, with live logs.
 - **Settings**: schedule, rating requirement, age limit, retries, batch size, Plex library/user and Telegram. Maintenance buttons: *Scan Plex*, *Reconcile with diary* (full diary re-check).
 
@@ -61,6 +67,7 @@ docker exec plex-to-letterboxd python main.py sync     # or: scan, reconcile
 | `LETTERBOXD_PASSWORD` | Letterboxd password                                      | -                        |
 | `PLEX_URL`            | Plex URL                                                 | `http://localhost:32400` |
 | `PLEX_TOKEN`          | Plex token ([how to find][plex])                         | -                        |
+| `PLEX_PUBLIC_URL`     | Plex address used for links in the web UI                | `PLEX_URL`               |
 | `TELEGRAM_BOT_TOKEN`  | Optional. Telegram bot token for notifications           | -                        |
 | `TELEGRAM_CHAT_ID`    | Optional. Telegram chat ID for notifications             | -                        |
 | `TZ`                  | Time zone used to turn Plex play times into diary dates  | `UTC`                    |

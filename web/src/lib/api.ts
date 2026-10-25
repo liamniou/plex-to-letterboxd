@@ -14,6 +14,7 @@ export interface Watch {
   note: string | null;
   synced_at: string | null;
   lb_viewing_id: string | null;
+  manual_skip: number;
   title: string;
   year: number | null;
   imdb_id: string | null;
@@ -118,9 +119,9 @@ export const api = {
 };
 
 export const posterUrl = (ratingKey: number) => `/api/poster/${ratingKey}`;
-export const plexUrl = (machineId: string | null | undefined, ratingKey: number) =>
-  machineId
-    ? `https://app.plex.tv/desktop/#!/server/${machineId}/details?key=${encodeURIComponent(`/library/metadata/${ratingKey}`)}`
+export const plexUrl = (plexBase: string | undefined, machineId: string | null | undefined, ratingKey: number) =>
+  plexBase && machineId
+    ? `${plexBase}/web/index.html#!/server/${machineId}/details?key=${encodeURIComponent(`/library/metadata/${ratingKey}`)}`
     : null;
 
 export const letterboxdUrl = (w: Pick<Watch, "lb_slug" | "tmdb_id" | "imdb_id">) =>

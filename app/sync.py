@@ -130,7 +130,7 @@ def upload(session, watches: list[dict], index: DiaryIndex, run_id: int) -> dict
     rows = []
     for w in watches:
         earlier = db.query_one(
-            "SELECT 1 FROM watches WHERE rating_key=? AND watched_date<? LIMIT 1", (w["rating_key"], w["watched_date"])
+            "SELECT 1 FROM watches WHERE rating_key=? AND watched_date<? AND status='synced' LIMIT 1", (w["rating_key"], w["watched_date"])
         )
         rows.append(csv_row(w, is_rewatch(w, bool(earlier), index)))
 

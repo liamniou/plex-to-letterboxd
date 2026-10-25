@@ -3,7 +3,7 @@ import json
 import os
 import sqlite3
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import config
 
@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS watches (
     synced_at       TEXT,
     synced_run_id   INTEGER,
     lb_viewing_id   TEXT,
+    manual_skip     INTEGER NOT NULL DEFAULT 0,
     created_at      TEXT NOT NULL,
     updated_at      TEXT NOT NULL,
     UNIQUE (rating_key, watched_date)
@@ -114,12 +115,20 @@ def connect(path: str | None = None, recover: bool = False) -> sqlite3.Connectio
         _conn.execute("PRAGMA journal_mode=WAL")
         _conn.execute("PRAGMA foreign_keys=ON")
         _conn.executescript(SCHEMA)
+        _migrate(_conn)
         if recover:
             _conn.execute(
                 "UPDATE runs SET status='failed', error='Interrupted by restart', finished_at=? WHERE status='running'",
                 (now_iso(),),
             )
     return _conn
+
+
+def _migrate(c: sqlite3.Connection) -> None:
+    cols = {r[1] for r in c.execute("PRAGMA table_info(watches)")}
+    if "manual_skip" not in cols:
+        c.execute("ALTER TABLE watches ADD COLUMN manual_skip INTEGER NOT NULL DEFAULT 0")
+        c.execute("UPDATE watches SET manual_skip=1 WHERE status='skipped' AND note='Skipped manually'")
 
 
 def conn() -> sqlite3.Connection:
@@ -263,8 +272,12 @@ def upsert_movie(m: dict) -> None:
     )
 
 
-def insert_watch(rating_key: int, watched_date: str, watched_at: str | None, source: str, status: str = "pending", note: str | None = None) -> bool:
-    """Insert a watch if (movie, date) is new. Returns True when inserted."""
+NEW_PLAY_GAP = timedelta(minutes=30)
+
+
+def insert_watch(rating_key: int, watched_date: str, watched_at: str | None, source: str, status: str = "pending", note: str | None = None) -> str | None:
+    """Record a play. Returns 'inserted' for a new (movie, date), 'reopened' when a
+    manually skipped watch got a newer play the same day, else None."""
     ts = now_iso()
     with _lock:
         cur = conn().execute(
@@ -272,7 +285,22 @@ def insert_watch(rating_key: int, watched_date: str, watched_at: str | None, sou
                VALUES(?, ?, ?, ?, ?, ?, ?, ?)""",
             (rating_key, watched_date, watched_at, source, status, note, ts, ts),
         )
-        return cur.rowcount > 0
+        if cur.rowcount > 0:
+            return "inserted"
+        # Skipped because someone else watched it: a later play the same day is a new viewing.
+        existing = conn().execute(
+            "SELECT id, watched_at FROM watches WHERE rating_key=? AND watched_date=? AND status='skipped' AND manual_skip=1",
+            (rating_key, watched_date),
+        ).fetchone()
+        if existing and watched_at and existing["watched_at"]:
+            if datetime.fromisoformat(watched_at) - datetime.fromisoformat(existing["watched_at"]) >= NEW_PLAY_GAP:
+                conn().execute(
+                    """UPDATE watches SET status='pending', manual_skip=0, watched_at=?, source=?, attempts=0,
+                       last_error=NULL, note='New play after skip', updated_at=? WHERE id=?""",
+                    (watched_at, source, ts, existing["id"]),
+                )
+                return "reopened"
+        return None
 
 
 WATCH_SELECT = """

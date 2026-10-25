@@ -109,7 +109,11 @@ def scan(settings: dict) -> dict:
             })
             seen_movies.add(rk)
         status, note = initial_status(watched_date, settings, baseline_done)
-        if db.insert_watch(rk, watched_date, watched_at, source, status, note):
+        result = db.insert_watch(rk, watched_date, watched_at, source, status, note)
+        if result == "reopened":
+            stats["new_watches"] += 1
+            logger.info(f"New play of skipped {m.title} ({m.year}) on {watched_date} -> pending")
+        elif result:
             stats["new_watches"] += 1
             if status == "skipped":
                 stats["new_skipped"] += 1

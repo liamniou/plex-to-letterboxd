@@ -59,12 +59,13 @@ def rating10(user_rating) -> int | str:
     return r if 1 <= r <= 10 else ""
 
 
-def is_rewatch(watch: dict, earlier_watch_exists: bool, diary: DiaryIndex) -> bool:
-    if earlier_watch_exists or diary.has_earlier(watch.get("lb_slug"), watch["watched_date"]):
-        return True
-    # Plays before Plex history/our memory began only show up in the view count.
-    last = (watch.get("last_viewed_at") or "")[:10]
-    return (watch.get("view_count") or 0) > 1 and last == watch["watched_date"]
+def is_rewatch(watch: dict, earlier_synced_watch: bool, diary: DiaryIndex) -> bool:
+    """A rewatch means *you* saw it before: an earlier synced watch or an earlier diary entry.
+
+    Plex's view count and skipped plays are deliberately ignored; they include
+    plays by someone else on the shared account.
+    """
+    return earlier_synced_watch or diary.has_earlier(watch.get("lb_slug"), watch["watched_date"])
 
 
 def csv_row(watch: dict, rewatch: bool) -> dict:

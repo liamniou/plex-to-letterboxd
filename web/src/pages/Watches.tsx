@@ -19,10 +19,16 @@ const TABS = [
 
 const PAGE_SIZE = 50;
 
-const ACTION_BUTTONS: { action: WatchAction; label: string; icon: typeof Check; show: (w: Watch) => boolean }[] = [
-  { action: "queue", label: "Queue", icon: RotateCcw, show: (w) => w.status !== "pending" },
-  { action: "skip", label: "Skip", icon: Ban, show: (w) => w.status === "pending" || w.status === "failed" },
-  { action: "mark_synced", label: "Mark synced", icon: Check, show: (w) => w.status !== "synced" },
+const ACTION_BUTTONS: { action: WatchAction; label: string; hint: string; icon: typeof Check; show: (w: Watch) => boolean }[] = [
+  { action: "queue", label: "Queue", hint: "Queue for the next sync", icon: RotateCcw, show: (w) => w.status !== "pending" },
+  {
+    action: "skip",
+    label: "Skip",
+    hint: "Skip (e.g. not watched by me). The next play of this film is picked up again.",
+    icon: Ban,
+    show: (w) => w.status === "pending" || w.status === "failed",
+  },
+  { action: "mark_synced", label: "Mark synced", hint: "Mark as already logged on Letterboxd", icon: Check, show: (w) => w.status !== "synced" },
 ];
 
 function useDebounced<T>(value: T, ms = 300) {
@@ -127,8 +133,8 @@ export function Watches() {
       {selected.size > 0 && (
         <div className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm">
           <span className="mr-2 text-zinc-300">{selected.size} selected</span>
-          {ACTION_BUTTONS.map(({ action: a, label, icon: Icon }) => (
-            <Button key={a} size="sm" onClick={() => action.mutate({ ids: [...selected], action: a })} loading={action.isPending && action.variables?.action === a}>
+          {ACTION_BUTTONS.map(({ action: a, label, hint, icon: Icon }) => (
+            <Button key={a} size="sm" title={hint} onClick={() => action.mutate({ ids: [...selected], action: a })} loading={action.isPending && action.variables?.action === a}>
               <Icon className="size-3.5" />
               {label}
             </Button>
@@ -176,6 +182,7 @@ export function Watches() {
                     busy={action.isPending && action.variables?.ids.length === 1 && action.variables.ids[0] === w.id}
                     requireRating={settings?.require_rating ?? true}
                     plexMachineId={status?.config.plex_machine_id}
+                    plexBase={status?.config.plex_url}
                   />
                 ))}
               </tbody>
@@ -213,6 +220,7 @@ function WatchRow({
   busy,
   requireRating,
   plexMachineId,
+  plexBase,
 }: {
   w: Watch;
   selected: boolean;
@@ -221,10 +229,11 @@ function WatchRow({
   busy: boolean;
   requireRating: boolean;
   plexMachineId: string | null | undefined;
+  plexBase: string | undefined;
 }) {
   const lb = letterboxdUrl(w);
-  const plex = plexUrl(plexMachineId, w.rating_key);
-  const detail = w.last_error ?? w.note;
+  const plex = plexUrl(plexBase, plexMachineId, w.rating_key);
+  const detail = w.last_error ?? (w.status === "skipped" && w.manual_skip ? "Skipped, waiting for the next play" : w.note);
   return (
     <tr className={clsx("transition-colors hover:bg-zinc-800/30", selected && "bg-zinc-800/40")}>
       <td className="px-4 py-2">
@@ -270,8 +279,8 @@ function WatchRow({
       </td>
       <td className="px-4 py-2">
         <div className="flex justify-end gap-1">
-          {ACTION_BUTTONS.filter((b) => b.show(w)).map(({ action, label, icon: Icon }) => (
-            <Button key={action} size="sm" variant="ghost" title={label} aria-label={label} onClick={() => onAction(action)} disabled={busy}>
+          {ACTION_BUTTONS.filter((b) => b.show(w)).map(({ action, label, hint, icon: Icon }) => (
+            <Button key={action} size="sm" variant="ghost" title={hint} aria-label={label} onClick={() => onAction(action)} disabled={busy}>
               <Icon className="size-3.5" />
             </Button>
           ))}

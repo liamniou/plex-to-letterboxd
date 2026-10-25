@@ -11,6 +11,8 @@ DB_PATH = os.path.join(DATA_DIR, "plex-to-letterboxd.db")
 
 PLEX_URL = os.getenv("PLEX_URL", "http://localhost:32400")
 PLEX_TOKEN = os.getenv("PLEX_TOKEN", "")
+# Browser-facing Plex address used for links in the UI (defaults to PLEX_URL)
+PLEX_PUBLIC_URL = (os.getenv("PLEX_PUBLIC_URL") or PLEX_URL).rstrip("/")
 
 LETTERBOXD_USERNAME = os.getenv("LETTERBOXD_USERNAME", "")
 LETTERBOXD_PASSWORD = os.getenv("LETTERBOXD_PASSWORD", "")

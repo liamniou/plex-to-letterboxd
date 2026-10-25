@@ -59,7 +59,7 @@ def status():
         "last_sync": db._decode_run(last_sync) if last_sync else None,
         "recent_synced": db.query(f"{db.WATCH_SELECT} WHERE w.status='synced' ORDER BY w.synced_at DESC, w.id DESC LIMIT 12"),
         "config": {
-            "plex_url": config.PLEX_URL,
+            "plex_url": config.PLEX_PUBLIC_URL,
             "plex_machine_id": plex_source.machine_id(),
             "plex_library": settings["plex_library"],
             "plex_configured": bool(config.PLEX_TOKEN),
@@ -82,9 +82,10 @@ class WatchAction(BaseModel):
 
 
 ACTIONS = {
-    "queue": ("pending", {"attempts": 0, "last_error": None, "note": "Queued manually"}),
-    "skip": ("skipped", {"note": "Skipped manually"}),
-    "mark_synced": ("synced", {"note": "Marked as synced manually", "last_error": None}),
+    "queue": ("pending", {"attempts": 0, "last_error": None, "note": "Queued manually", "manual_skip": 0}),
+    # e.g. someone else watched it; the next play of the film is picked up again
+    "skip": ("skipped", {"note": "Skipped manually", "manual_skip": 1}),
+    "mark_synced": ("synced", {"note": "Marked as synced manually", "last_error": None, "manual_skip": 0}),
 }
 
 
