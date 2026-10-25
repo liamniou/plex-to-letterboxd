@@ -60,6 +60,7 @@ def status():
         "recent_synced": db.query(f"{db.WATCH_SELECT} WHERE w.status='synced' ORDER BY w.synced_at DESC, w.id DESC LIMIT 12"),
         "config": {
             "plex_url": config.PLEX_URL,
+            "plex_machine_id": plex_source.machine_id(),
             "plex_library": settings["plex_library"],
             "plex_configured": bool(config.PLEX_TOKEN),
             "letterboxd_configured": bool(config.LETTERBOXD_USERNAME and config.LETTERBOXD_PASSWORD),

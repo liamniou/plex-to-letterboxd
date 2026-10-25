@@ -62,6 +62,7 @@ export interface Status {
   recent_synced: Watch[];
   config: {
     plex_url: string;
+    plex_machine_id: string | null;
     plex_library: string;
     plex_configured: boolean;
     letterboxd_configured: boolean;
@@ -117,6 +118,11 @@ export const api = {
 };
 
 export const posterUrl = (ratingKey: number) => `/api/poster/${ratingKey}`;
+export const plexUrl = (machineId: string | null | undefined, ratingKey: number) =>
+  machineId
+    ? `https://app.plex.tv/desktop/#!/server/${machineId}/details?key=${encodeURIComponent(`/library/metadata/${ratingKey}`)}`
+    : null;
+
 export const letterboxdUrl = (w: Pick<Watch, "lb_slug" | "tmdb_id" | "imdb_id">) =>
   w.lb_slug
     ? `https://letterboxd.com/film/${w.lb_slug}/`

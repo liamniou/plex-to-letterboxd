@@ -4,7 +4,7 @@ import { Ban, Check, ChevronLeft, ChevronRight, ExternalLink, RotateCcw, Search 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button, Card, Empty, Poster, Spinner, WatchStatusBadge } from "../components/ui";
-import { api, letterboxdUrl, type Watch, type WatchAction } from "../lib/api";
+import { api, letterboxdUrl, plexUrl, type Watch, type WatchAction } from "../lib/api";
 import { formatDate, formatDateTime, stars } from "../lib/format";
 import { useSettings, useStatus } from "../lib/hooks";
 
@@ -175,6 +175,7 @@ export function Watches() {
                     onAction={(a) => action.mutate({ ids: [w.id], action: a })}
                     busy={action.isPending && action.variables?.ids.length === 1 && action.variables.ids[0] === w.id}
                     requireRating={settings?.require_rating ?? true}
+                    plexMachineId={status?.config.plex_machine_id}
                   />
                 ))}
               </tbody>
@@ -211,6 +212,7 @@ function WatchRow({
   onAction,
   busy,
   requireRating,
+  plexMachineId,
 }: {
   w: Watch;
   selected: boolean;
@@ -218,8 +220,10 @@ function WatchRow({
   onAction: (a: WatchAction) => void;
   busy: boolean;
   requireRating: boolean;
+  plexMachineId: string | null | undefined;
 }) {
   const lb = letterboxdUrl(w);
+  const plex = plexUrl(plexMachineId, w.rating_key);
   const detail = w.last_error ?? w.note;
   return (
     <tr className={clsx("transition-colors hover:bg-zinc-800/30", selected && "bg-zinc-800/40")}>
@@ -234,14 +238,14 @@ function WatchRow({
               {w.title} {w.year && <span className="font-normal text-zinc-500">({w.year})</span>}
             </div>
             <div className="mt-0.5 flex items-center gap-2 text-xs text-zinc-500">
-              {lb && (
-                <a href={lb} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 hover:text-zinc-300">
-                  Letterboxd <ExternalLink className="size-3" />
+              {plex && (
+                <a href={plex} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 hover:text-[#e5a00d]">
+                  Plex <ExternalLink className="size-3" />
                 </a>
               )}
-              {w.imdb_id && (
-                <a href={`https://www.imdb.com/title/${w.imdb_id}/`} target="_blank" rel="noreferrer" className="hover:text-zinc-300">
-                  IMDb
+              {lb && (
+                <a href={lb} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 hover:text-[#00e054]">
+                  Letterboxd <ExternalLink className="size-3" />
                 </a>
               )}
               {w.rewatch ? <span>rewatch</span> : null}

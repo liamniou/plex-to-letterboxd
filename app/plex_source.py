@@ -122,6 +122,24 @@ def scan(settings: dict) -> dict:
     return stats
 
 
+_machine_id: str | None = None
+
+
+def machine_id() -> str | None:
+    """Plex server machineIdentifier (needed for app.plex.tv deep links); cached once found."""
+    global _machine_id
+    if _machine_id is None:
+        import requests
+
+        try:
+            resp = requests.get(f"{config.PLEX_URL.rstrip('/')}/identity", headers={"Accept": "application/json"}, timeout=5)
+            resp.raise_for_status()
+            _machine_id = resp.json()["MediaContainer"]["machineIdentifier"]
+        except Exception as exc:
+            logger.warning(f"Could not read Plex machine identifier: {exc}")
+    return _machine_id
+
+
 def fetch_thumb(thumb: str) -> tuple[bytes, str]:
     import requests
 
