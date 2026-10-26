@@ -1,8 +1,9 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
-import { Ban, Check, ChevronLeft, ChevronRight, ExternalLink, RotateCcw, Search } from "lucide-react";
+import { Ban, Check, ChevronLeft, ChevronRight, ExternalLink, RotateCcw, Search, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { RatingDialog } from "../components/RatingDialog";
 import { Button, Card, Empty, Poster, Spinner, WatchStatusBadge } from "../components/ui";
 import { api, letterboxdUrl, plexUrl, type Watch, type WatchAction } from "../lib/api";
 import { formatDate, formatDateTime, stars } from "../lib/format";
@@ -47,6 +48,7 @@ export function Watches() {
   const [search, setSearch] = useState(params.get("q") ?? "");
   const q = useDebounced(search);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [rating, setRating] = useState<Watch | null>(null);
   const { data: status } = useStatus();
   const { data: settings } = useSettings();
   const qc = useQueryClient();
@@ -80,6 +82,15 @@ export function Watches() {
     mutationFn: ({ ids, action }: { ids: number[]; action: WatchAction }) => api.watchAction(ids, action),
     onSuccess: () => {
       setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["watches"] });
+      qc.invalidateQueries({ queryKey: ["status"] });
+    },
+  });
+
+  const rate = useMutation({
+    mutationFn: ({ ratingKey, value }: { ratingKey: number; value: number }) => api.setRating(ratingKey, value),
+    onSuccess: () => {
+      setRating(null);
       qc.invalidateQueries({ queryKey: ["watches"] });
       qc.invalidateQueries({ queryKey: ["status"] });
     },
@@ -119,13 +130,13 @@ export function Watches() {
             </button>
           ))}
         </div>
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search title, IMDb or TMDB id"
-            className="h-9 w-72 rounded-md border border-zinc-800 bg-zinc-900 pl-8 pr-3 text-sm outline-none placeholder:text-zinc-600 focus:border-zinc-600"
+            className="h-9 w-full rounded-md sm:w-72 border border-zinc-800 bg-zinc-900 pl-8 pr-3 text-sm outline-none placeholder:text-zinc-600 focus:border-zinc-600"
           />
         </div>
       </div>
@@ -165,10 +176,10 @@ export function Watches() {
                     />
                   </th>
                   <th className="py-2.5 font-medium">Film</th>
-                  <th className="px-3 py-2.5 font-medium">Watched</th>
+                  <th className="px-3 py-2.5 font-medium max-sm:hidden">Watched</th>
                   <th className="px-3 py-2.5 font-medium">Rating</th>
-                  <th className="px-3 py-2.5 font-medium">Status</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Actions</th>
+                  <th className="px-3 py-2.5 font-medium max-sm:hidden">Status</th>
+                  <th className="px-4 py-2.5 text-right font-medium max-sm:px-2">Actions</th>
                 </tr>
               </thead>
               <tbody className={clsx("divide-y divide-zinc-800/70", query.isPlaceholderData && "opacity-60")}>
@@ -183,6 +194,10 @@ export function Watches() {
                     requireRating={settings?.require_rating ?? true}
                     plexMachineId={status?.config.plex_machine_id}
                     plexBase={status?.config.plex_url}
+                    onRate={() => {
+                      rate.reset();
+                      setRating(w);
+                    }}
                   />
                 ))}
               </tbody>
@@ -208,6 +223,19 @@ export function Watches() {
           </div>
         )}
       </Card>
+
+      {rating && (
+        <RatingDialog
+          title={rating.title}
+          year={rating.year}
+          initial={rating.user_rating}
+          synced={rating.status === "synced"}
+          saving={rate.isPending}
+          error={rate.error ? (rate.error as Error).message : null}
+          onSave={(value) => rate.mutate({ ratingKey: rating.rating_key, value })}
+          onClose={() => setRating(null)}
+        />
+      )}
     </div>
   );
 }
@@ -221,6 +249,7 @@ function WatchRow({
   requireRating,
   plexMachineId,
   plexBase,
+  onRate,
 }: {
   w: Watch;
   selected: boolean;
@@ -230,20 +259,21 @@ function WatchRow({
   requireRating: boolean;
   plexMachineId: string | null | undefined;
   plexBase: string | undefined;
+  onRate: () => void;
 }) {
   const lb = letterboxdUrl(w);
   const plex = plexUrl(plexBase, plexMachineId, w.rating_key);
   const detail = w.last_error ?? (w.status === "skipped" && w.manual_skip ? "Skipped, waiting for the next play" : w.note);
   return (
     <tr className={clsx("transition-colors hover:bg-zinc-800/30", selected && "bg-zinc-800/40")}>
-      <td className="px-4 py-2">
+      <td className="px-4 py-2 max-sm:px-3">
         <input type="checkbox" className="accent-emerald-500" checked={selected} onChange={onToggle} aria-label={`Select ${w.title}`} />
       </td>
       <td className="py-2">
         <div className="flex items-center gap-3">
-          <Poster ratingKey={w.rating_key} hasPoster={w.has_poster} className="h-12 w-8 shrink-0" />
+          <Poster ratingKey={w.rating_key} hasPoster={w.has_poster} className="h-12 w-8 shrink-0 max-sm:hidden" />
           <div className="min-w-0">
-            <div className="truncate font-medium text-zinc-100">
+            <div className="font-medium text-zinc-100 sm:truncate">
               {w.title} {w.year && <span className="font-normal text-zinc-500">({w.year})</span>}
             </div>
             <div className="mt-0.5 flex items-center gap-2 text-xs text-zinc-500">
@@ -259,15 +289,36 @@ function WatchRow({
               )}
               {w.rewatch ? <span>rewatch</span> : null}
             </div>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500 sm:hidden">
+              <span>{formatDate(w.watched_date)}</span>
+              <WatchStatusBadge watch={w} requireRating={requireRating} />
+            </div>
           </div>
         </div>
       </td>
-      <td className="whitespace-nowrap px-3 py-2 text-zinc-300">
+      <td className="whitespace-nowrap px-3 py-2 text-zinc-300 max-sm:hidden">
         <div title={w.watched_at ? formatDateTime(w.watched_at) : undefined}>{formatDate(w.watched_date)}</div>
         <div className="text-xs text-zinc-500">{w.source === "history" ? "Plex history" : w.source === "plex" ? "Plex" : w.source}</div>
       </td>
-      <td className="whitespace-nowrap px-3 py-2 text-emerald-400">{stars(w.user_rating) || <span className="text-zinc-600">—</span>}</td>
-      <td className="max-w-xs px-3 py-2">
+      <td className="whitespace-nowrap px-3 py-2 max-sm:px-1">
+        <button
+          type="button"
+          onClick={onRate}
+          title="Set rating in Plex"
+          className={clsx(
+            "inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-sm transition-colors hover:bg-zinc-800",
+            w.user_rating ? "text-emerald-400" : "text-zinc-500 hover:text-zinc-200",
+          )}
+        >
+          {stars(w.user_rating) || (
+            <>
+              <Star className="size-3.5" />
+              <span className="text-xs">Rate</span>
+            </>
+          )}
+        </button>
+      </td>
+      <td className="max-w-xs px-3 py-2 max-sm:hidden">
         <WatchStatusBadge watch={w} requireRating={requireRating} />
         {detail && (
           <div className={clsx("mt-1 truncate text-xs", w.last_error ? "text-red-400/90" : "text-zinc-500")} title={detail}>
@@ -277,8 +328,8 @@ function WatchRow({
         )}
         {w.synced_at && w.status === "synced" && <div className="text-xs text-zinc-600">{formatDateTime(w.synced_at)}</div>}
       </td>
-      <td className="px-4 py-2">
-        <div className="flex justify-end gap-1">
+      <td className="px-4 py-2 max-sm:px-2">
+        <div className="flex justify-end gap-1 max-sm:flex-col max-sm:items-end">
           {ACTION_BUTTONS.filter((b) => b.show(w)).map(({ action, label, hint, icon: Icon }) => (
             <Button key={action} size="sm" variant="ghost" title={hint} aria-label={label} onClick={() => onAction(action)} disabled={busy}>
               <Icon className="size-3.5" />

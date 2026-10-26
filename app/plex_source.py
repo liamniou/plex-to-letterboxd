@@ -126,6 +126,15 @@ def scan(settings: dict) -> dict:
     return stats
 
 
+def set_rating(settings: dict, rating_key: int, rating10: int | None) -> float | None:
+    """Rate a film in Plex as the configured user (1-10, i.e. half stars). None clears it."""
+    _, scoped, _ = connect(settings)
+    item = scoped.fetchItem(rating_key)
+    item.rate(float(rating10) if rating10 else None)
+    item.reload()
+    return item.userRating
+
+
 _machine_id: str | None = None
 
 

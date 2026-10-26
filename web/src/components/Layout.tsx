@@ -84,41 +84,50 @@ export function Layout() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-3 border-b border-zinc-800/80 bg-zinc-950/80 px-6 backdrop-blur">
-          <div className="flex items-center gap-4">
+        <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-3 border-b border-zinc-800/80 bg-zinc-950/80 px-6 backdrop-blur max-md:px-4">
+          <div className="flex min-w-0 items-center gap-4">
             <div className="md:hidden">
               <Logo />
             </div>
             <h1 className="text-base font-semibold max-md:hidden">{title}</h1>
-            <nav className="flex gap-1 md:hidden">
-              {NAV.map(({ to, icon: Icon, label }) => (
-                <NavLink key={to} to={to} end={to === "/"} aria-label={label} className={({ isActive }) => clsx("rounded p-1.5", isActive ? "bg-zinc-800" : "text-zinc-500")}>
-                  <Icon className="size-4" />
-                </NavLink>
-              ))}
-            </nav>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {current && (
               <span className="flex items-center gap-1.5 text-xs text-sky-400 max-sm:hidden">
                 <Loader2 className="size-3.5 animate-spin" />
                 {JOB_LABEL[current.kind] ?? current.kind}…{queued.length > 0 && <span className="text-zinc-500">(+{queued.length} queued)</span>}
               </span>
             )}
-            <Button size="sm" variant="ghost" onClick={() => startJob.mutate("scan")} disabled={busy} title="Read Plex watch history without uploading">
+            <Button size="sm" variant="ghost" onClick={() => startJob.mutate("scan")} disabled={busy} title="Read Plex watch history without uploading" aria-label="Scan Plex">
               <ScanSearch className="size-3.5" />
-              Scan Plex
+              <span className="max-sm:hidden">Scan Plex</span>
             </Button>
-            <Button size="sm" variant="primary" onClick={() => startJob.mutate("sync")} disabled={busy}>
+            <Button size="sm" variant="primary" onClick={() => startJob.mutate("sync")} disabled={busy} aria-label="Sync now" className="whitespace-nowrap">
               <RefreshCw className={clsx("size-3.5", current?.kind === "sync" && "animate-spin")} />
-              Sync now
+              <span className="max-[359px]:hidden">Sync now</span>
             </Button>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-7xl flex-1 p-6">
+        <main className="mx-auto w-full max-w-7xl flex-1 p-6 max-md:px-3 max-md:pb-24 max-md:pt-4">
           <Outlet />
         </main>
       </div>
+
+      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-zinc-800 bg-zinc-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+        {NAV.map(({ to, label, icon: Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={to === "/"}
+            className={({ isActive }) =>
+              clsx("flex flex-col items-center gap-1 py-2 text-[11px] transition-colors", isActive ? "text-emerald-400" : "text-zinc-500")
+            }
+          >
+            <Icon className="size-5" />
+            {label}
+          </NavLink>
+        ))}
+      </nav>
     </div>
   );
 }

@@ -268,3 +268,20 @@ def test_migration_flags_existing_manual_skips(tmp_path):
     db.connect(path)
     assert db.query_one("SELECT manual_skip FROM watches")["manual_skip"] == 1
     db.connect(":memory:")
+
+
+def test_rating_endpoint_updates_plex_and_memory(mem_db, monkeypatch):
+    from fastapi.testclient import TestClient
+    import server
+
+    add(1, "Unrated", d(1), rating=None)
+    calls = []
+    monkeypatch.setattr(server.plex_source, "set_rating", lambda s, rk, r: calls.append((rk, r)) or (float(r) if r else None))
+    client = TestClient(server.app)  # no lifespan: keeps the in-memory DB and no background threads
+    assert client.put("/api/movies/1/rating", json={"rating": 7}).json()["user_rating"] == 7.0
+    assert db.query_one("SELECT user_rating FROM movies WHERE rating_key=1")["user_rating"] == 7.0
+    assert sync.sync_candidates(db.get_settings())[0]["title"] == "Unrated"  # now eligible
+    assert client.put("/api/movies/1/rating", json={"rating": 0}).json()["user_rating"] is None
+    assert calls == [(1, 7), (1, None)]
+    assert client.put("/api/movies/1/rating", json={"rating": 11}).status_code == 400
+    assert client.put("/api/movies/999/rating", json={"rating": 5}).status_code == 404

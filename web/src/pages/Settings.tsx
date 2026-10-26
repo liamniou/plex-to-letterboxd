@@ -12,7 +12,7 @@ function Field({ label, hint, children }: { label: string; hint?: ReactNode; chi
         <div className="text-sm font-medium text-zinc-200">{label}</div>
         {hint && <div className="mt-0.5 text-xs text-zinc-500">{hint}</div>}
       </div>
-      <div className="shrink-0">{children}</div>
+      <div className="min-w-0 sm:shrink-0">{children}</div>
     </div>
   );
 }
@@ -131,6 +131,7 @@ export function Settings() {
           >
             <Button
               variant="ghost"
+              className="h-auto max-w-full py-1.5 text-left"
               onClick={() => {
                 navigator.clipboard?.writeText(webhookUrl);
                 setCopied(true);
@@ -138,7 +139,7 @@ export function Settings() {
               }}
             >
               <Webhook className="size-4" />
-              <code className="text-xs">{webhookUrl}</code>
+              <code className="min-w-0 break-all text-xs">{webhookUrl}</code>
               <Copy className="size-3.5" />
               {copied && <span className="text-xs text-emerald-400">copied</span>}
             </Button>

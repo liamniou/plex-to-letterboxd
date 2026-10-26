@@ -111,6 +111,8 @@ export const api = {
   },
   watchAction: (ids: number[], action: WatchAction) =>
     req<{ updated: number }>("/api/watches/action", { method: "POST", body: JSON.stringify({ ids, action }) }),
+  setRating: (ratingKey: number, rating: number) =>
+    req<{ rating_key: number; user_rating: number | null }>(`/api/movies/${ratingKey}/rating`, { method: "PUT", body: JSON.stringify({ rating }) }),
   startJob: (kind: "scan" | "sync" | "reconcile") => req<{ enqueued: boolean }>(`/api/jobs/${kind}`, { method: "POST" }),
   runs: (limit = 100) => req<{ items: Run[] }>(`/api/runs?limit=${limit}`),
   run: (id: number, afterId = 0) => req<{ run: Run; logs: LogLine[] }>(`/api/runs/${id}?after_id=${afterId}`),

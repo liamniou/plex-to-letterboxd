@@ -37,7 +37,7 @@ After the baseline, a newly discovered watch that is already older than `max_age
 Open `http://<host>:7477`:
 
 - **Dashboard**: counts, recently logged films, next/last sync and connection status.
-- **Watches**: every tracked watch with poster, rating and status, with filters and search. Per-row or bulk actions: **Queue** (sync again), **Skip** (until the next play), **Mark synced**.
+- **Watches**: every tracked watch with poster, rating and status, with filters and search. Per-row or bulk actions: **Queue** (sync again), **Skip** (until the next play), **Mark synced**. Click the rating, or **Rate**, to set the film's Plex rating (half stars) from a popup.
 - **Runs**: history of every sync, scan and reconcile, with live logs.
 - **Settings**: schedule, rating requirement, age limit, retries, batch size, Plex library/user and Telegram. Maintenance buttons: *Scan Plex*, *Reconcile with diary* (full diary re-check).
 
@@ -81,7 +81,7 @@ Initial values for UI settings can also be set with `PLEX_LIBRARY` (`Films`), `P
 
 ## API
 
-`GET /api/status`, `GET /api/watches?status=&q=&page=`, `POST /api/watches/action` (`{"ids": [...], "action": "queue|skip|mark_synced"}`), `POST /api/jobs/{scan|sync|reconcile}`, `GET /api/runs`, `GET /api/runs/{id}`, `GET|PUT /api/settings`, `POST /api/webhook/tautulli`, `GET /api/health`.
+`GET /api/status`, `GET /api/watches?status=&q=&page=`, `POST /api/watches/action` (`{"ids": [...], "action": "queue|skip|mark_synced"}`), `POST /api/jobs/{scan|sync|reconcile}`, `GET /api/runs`, `GET /api/runs/{id}`, `GET|PUT /api/settings`, `PUT /api/movies/{rating_key}/rating` (`{"rating": 0-10}`, 0 clears), `POST /api/webhook/tautulli`, `GET /api/health`.
 
 ## Development
 

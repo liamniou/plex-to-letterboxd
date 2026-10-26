@@ -103,6 +103,26 @@ def watch_action(body: WatchAction):
     return {"updated": updated}
 
 
+class RatingBody(BaseModel):
+    rating: int  # Plex scale 0-10 (half stars); 0 clears the rating
+
+
+@app.put("/api/movies/{rating_key}/rating")
+def set_rating(rating_key: int, body: RatingBody):
+    if not 0 <= body.rating <= 10:
+        raise HTTPException(400, "Rating must be between 0 and 10")
+    if not db.query_one("SELECT 1 FROM movies WHERE rating_key=?", (rating_key,)):
+        raise HTTPException(404, "Unknown film")
+    try:
+        new_rating = plex_source.set_rating(db.get_settings(), rating_key, body.rating or None)
+    except Exception as exc:
+        logger.exception("Setting Plex rating failed")
+        raise HTTPException(502, f"Plex: {exc}")
+    db.execute("UPDATE movies SET user_rating=?, updated_at=? WHERE rating_key=?", (new_rating, db.now_iso(), rating_key))
+    logger.info(f"Set Plex rating of {rating_key} to {new_rating}")
+    return {"rating_key": rating_key, "user_rating": new_rating}
+
+
 @app.post("/api/jobs/{kind}")
 def start_job(kind: str):
     if kind not in ("scan", "sync", "reconcile"):
