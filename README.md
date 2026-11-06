@@ -4,6 +4,8 @@ A small service that logs the films you watch in Plex to your Letterboxd diary. 
 
 Letterboxd has no public API (access requires [special approval](https://letterboxd.com/api-beta/)), so the service drives the website with a headless [Camoufox](https://camoufox.com) (Firefox/Playwright) browser.
 
+<img width="1688" height="737" alt="Screenshot 2026-11-06 at 15 35 35" src="https://github.com/user-attachments/assets/f757867e-e632-44e1-9758-1190dd5fdc68" />
+
 ## How it works
 
 Every watch (film + date) is tracked in a database with a status: `pending`, `synced`, `failed` or `skipped`.
